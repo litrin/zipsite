@@ -10,3 +10,4 @@ def main(Entry):
         Entry = rInfo.sub(sTarget, Entry)
 		
     return Entry
+
