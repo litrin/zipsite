@@ -8,6 +8,10 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/admin
   login: admin
 
+- url: /sitemap.xml|/sitemap.xsl
+  script: sitemap.py
+  secure: never
+  
 - url: .*
   script: zipsite.py
   secure: never
