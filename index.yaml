@@ -12,5 +12,23 @@ indexes:
 
 - kind: DBCache
   properties:
+  - name: MimeType
+  - name: LoadCount
+
+- kind: DBCache
+  properties:
+  - name: MimeType
+  - name: LoadCount
+    direction: desc
+
+- kind: DBCache
+  properties:
+  - name: MimeType
+  - name: Number
+  - name: LoadCount
+    direction: desc
+
+- kind: DBCache
+  properties:
   - name: URL
   - name: Number
