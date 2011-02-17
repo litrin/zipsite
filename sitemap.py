@@ -60,7 +60,7 @@ class MainHandler(webapp.RequestHandler):
         for Query in DBHandle:
             i += 1
             line="<url>\n"
-            line+="\t<loc>" + 'http://android-sdk.appspot.com'+ Query.URL + "</loc>\n"
+            line+="\t<loc>" + self.request.host_url + Query.URL + "</loc>\n"
 
             timeString = str(Query.CreateTime.strftime('%Y-%m-%dT%H:%M:%S.%f'))
  
