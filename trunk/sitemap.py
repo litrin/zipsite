@@ -11,23 +11,25 @@
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
-from zipfile import ZipFile
 from DataStore import *
 import time
 import os
 import logging
-import math
 
 
-class MainHandler(webapp.RequestHandler):
+class xml(webapp.RequestHandler):
     
     XMLBody = ''
     
     def get(self):
-        self.response.headers['Content-Type'] = 'application/xml'
-        xml = self.buildXml()
-        memcache.add("/sitmap.xml", xml, 60*60*24)
+        xml = memcache.get(self.request.path)
         
+        if (xml is None) :
+            
+            xml = self.buildXml()
+            memcache.add(self.request.path, xml, 60*60*24)
+            
+        self.response.headers['Content-Type'] = 'application/xml'
         self.response.out.write(xml)
         
         
@@ -52,7 +54,7 @@ class MainHandler(webapp.RequestHandler):
             
         
     def buildElement(self, offSet):
-        maxLoadCount = self.getMaxLoad()
+        maxLoadCount = float(self.getMaxLoad())
         DBHandle = DBCache.all()
         DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount').fetch(1000, offSet)
         
@@ -62,15 +64,14 @@ class MainHandler(webapp.RequestHandler):
             line="<url>\n"
             line+="\t<loc>" + self.request.host_url + Query.URL + "</loc>\n"
 
-            timeString = str(Query.CreateTime.strftime('%Y-%m-%dT%H:%M:%S.%f'))
- 
+            timeString = str(Query.CreateTime.strftime('%Y-%m-%dT%H:%M:%S-08:00')) 
             line+="\t<lastmod>" + timeString + "</lastmod>\n"
             
-            line+="\t<changefreq>monthly</changefreq>\n"
+            line+="\t<changefreq>weekly</changefreq>\n"
             
-            priority = ( math.ceil( Query.LoadCount / maxLoadCount * 10 )) / 10
-            if priority < 0.1 :
-                priority = 0.1
+            priority = round( Query.LoadCount / maxLoadCount, 2 ) 
+            if priority < 0.01 :
+                priority = 0.01
             line+="\t<priority>" + str(priority) + "</priority>\n"
             
             line+="</url>\n"
@@ -90,6 +91,45 @@ class MainHandler(webapp.RequestHandler):
         header += "http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n"
         
         return header
+
+        
+class txt(webapp.RequestHandler):
+    sitemapBody = ''
+    def get(self):
+        txt = memcache.get(self.request.path)
+
+        if (txt is None) :
+            
+            txt = self.buildTxt()
+            memcache.add(self.request.path, txt, 60*60*24)
+            
+        self.response.headers['Content-Type'] = 'text/plain'
+        self.response.out.write(txt)
+
+    
+    def buildTxt(self):
+       
+        offSet = 0
+        count = self.buildTxtElement(offSet)
+        
+        while (count == 1000):
+            offSet += 1000
+            count = self.buildTxtElement(offSet)
+            
+        
+        return self.sitemapBody
+            
+        
+    def buildTxtElement(self, offSet):
+        DBHandle = DBCache.all()
+        DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount').fetch(1000, offSet)
+        
+        i = 0 
+        for Query in DBHandle:
+            self.sitemapBody += self.request.host_url + Query.URL  + '\n'
+            
+        return i
+        
 
 class xsl(webapp.RequestHandler):
     def get(self):
@@ -215,13 +255,14 @@ class xsl(webapp.RequestHandler):
         self.response.out.write(xsl)
 
 def main():
-	application = webapp.WSGIApplication([
-									('/sitemap.xsl', xsl),
-                                    ('/sitemap.xml', MainHandler),
+    application = webapp.WSGIApplication([
+                ('/sitemap.xsl', xsl),
+                ('/sitemap.xml', xml),
+                ('/sitemap.txt', txt),
                                     
-								], 
-													debug=True)
-	wsgiref.handlers.CGIHandler().run(application)
+            ], 
+        debug=True)
+    wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == '__main__':
-	main()
+    main()

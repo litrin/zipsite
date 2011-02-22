@@ -8,7 +8,7 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/admin
   login: admin
 
-- url: /sitemap.xml|/sitemap.xsl
+- url: /sitemap.xml|/sitemap.xsl|/sitemap.txt
   script: sitemap.py
   secure: never
   
