@@ -41,7 +41,7 @@ class DBCache(db.Model):
                     Number += 1
                     spliteEntry = ''
                                         
-                self.SaveBlob(URL, spliteEntry, MimeType, Number)
+            self.SaveBlob(URL, spliteEntry, MimeType, Number)
                         
     
     def Load(self, URL):

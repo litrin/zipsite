@@ -197,7 +197,7 @@ class xsl(webapp.RequestHandler):
 				<h1>XML Sitemap</h1>
 				<div id="intro">
 					<p>
-						This is a XML Sitemap which is supposed to be processed by search engines like <a href="http://www.google.com">Google</a>, <a href="http://search.msn.com">MSN Search</a> and <a href="http://www.yahoo.com">YAHOO</a>.<br />
+						This is a XML Sitemap which is supposed to be processed by search engines like <a href="http://www.google.com">Google</a>, <a href="http://www.bing.com">Bing</a> and <a href="http://www.yahoo.com">YAHOO</a>.<br />
 
 						It was generated using <a href="http://code.google.com/p/zipsite/">zipSite</a> by <a href="http://www.litrin.net/">Litrin Jiang</a>.<br />
 						You can find more information about XML sitemaps on <a href="http://sitemaps.org">sitemaps.org</a> and Google's <a href="http://code.google.com/sm_thirdparty.html">list of sitemap programs</a>.
