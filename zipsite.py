@@ -4,7 +4,7 @@
 ##        that support create a webisite by ZIP packages!
 ##
 ##    By Litrin J. 2011/02
-##    Website: www.litrin.net
+##    Website: http://code.google.com/p/zipsite
 ##
 
 import wsgiref.handlers
@@ -207,21 +207,9 @@ This is a project for Google App Engine that support create a webisite by ZIP pa
                 
         return Entry
 
-class clean(webapp.RequestHandler):
-    
-    def get(self):
-        memcache.flush_all()
-        logging.info('Memcache has all flushed! ')
-        
-        db.delete(DBCache().all())
-        
-        self.redirect( '/' )
-        
-
 
 def main():
     application = webapp.WSGIApplication([
-                            ('/memcacheflush', clean), 
                             ('.*', MainHandler),
                                 ], 
                                                     debug=True)

@@ -11,6 +11,11 @@ handlers:
 - url: /sitemap.xml|/sitemap.xsl|/sitemap.txt
   script: sitemap.py
   secure: never
+
+- url: .*
+  script: deletecache.py
+  secure: never
+  login: admin
   
 - url: .*
   script: zipsite.py
