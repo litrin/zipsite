@@ -11,55 +11,149 @@
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
+from google.appengine.api.labs import taskqueue
 from DataStore import *
+from LoadConfig import Config
 import time
 import os
 import logging
 
 
+
 class xml(webapp.RequestHandler):
     
-    XMLBody = ''
-    
     def get(self):
-        xml = memcache.get(self.request.path)
+        totalPart = memcache.get('sitemap.xml_total_part')
         
-        if (xml is None) :
+        if (totalPart is None):
             
-            xml = self.buildXml()
-            memcache.add(self.request.path, xml, 60*60*24)
+            pQueue = taskqueue.Queue(name = 'CreateSitemap')
+            taskurl = 'http://' + self.request.host_url
+            pTask = taskqueue.Task(url='/sitemap.xml/Create', params=dict(url=taskurl))
+        
+            pQueue.add(pTask)
+            logging.info('Task queue started!')
             
+            xml = ''
+            
+        else:
+            partNo = 1
+            xml = self.xmlHeader()
+            
+            while(partNo <= totalPart):
+                key = 'sitemap.xml_part' + str (partNo)
+                partNo += 1
+                
+                partBody = memcache.get(key)
+                
+                if (partBody is None):
+                    partBody = ''
+                xml += partBody
+                
+            xml += "</urlset>\n"
+        
         self.response.headers['Content-Type'] = 'application/xml'
         self.response.out.write(xml)
+            
+    
+    def xmlHeader(self):
+    
+        header = "<?xml version='1.0' encoding='UTF-8'?>\n"
+        header += "<?xml-stylesheet type=\"text/xsl\" href=\"/sitemap.xsl\"?>\n"
+        header += "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
+        header += "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+        header += "xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9"
+        header += "http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n"
         
+        return header
+
+class xmlCreate(webapp.RequestHandler):
+    
+    PreLoad = 500
+    
+    sitemapCacheTime = 60*60*24
+    
+    def post(self):
+        self.get()
+    
+    def get(self):
+        
+        self.sitemapCacheTime = Config(FileName='website.cfg', Title='sitemap').getInt('MemcacheTime')
+        self.PreLoad = Config(FileName='website.cfg', Title='sitemap').getInt('CountPreLoad')
+        
+        finishedCount = memcache.get('tmp_sitemap_finished_count')
+        
+        if (finishedCount is None):
+            finishedCount = 0
+        
+        self.buildXml(finishedCount)
         
     def getMaxLoad(self):
+    
         DBHandle = DBCache.all()
-        DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount').fetch(1)
-        for Query in DBHandle:
+        DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount')
+        
+        for Query in DBHandle.fetch(1):
+            memcache.add('tmp_sitemap_maxload', float(Query.LoadCount), 60*5)
             return Query.LoadCount 
     
-    def buildXml(self):
-        self.XMLBody = self.xmlHeader()
-        offSet = 0
+    def buildXml(self, offSet):
+
         count = self.buildElement(offSet)
         
-        while (count == 1000):
-            offSet += 1000
-            count = self.buildElement(offSet)
-            
-        self.XMLBody += "</urlset>\n"
+        partNo =  memcache.get('sitemap.xml_total_part')
+        if (partNo is None):
+            partNo = 0
+        partNo += 1
+        memcache.set('sitemap.xml_total_part', partNo, self.sitemapCacheTime)
         
-        return self.XMLBody
+        logging.info('Start caching part ' + str(partNo))
+        
+        finishedCount = offSet + count
+
+        key = 'sitemap.xml_part' + str (partNo)
+        
+        memcache.set(key, self.XMLBody, self.sitemapCacheTime)
+        memcache.set('tmp_sitemap_finished_count', finishedCount, 60*5)
+
+
+        if (count == self.PreLoad):
             
+            pQueue = taskqueue.Queue(name = 'CreateSitemap')
+            taskurl = 'http://' + self.request.host_url
+            pTask = taskqueue.Task(url='/sitemap.xml/Create', params=dict(url=taskurl))
+        
+            pQueue.add(pTask)
+            logging.info('Task queue added!')
+            
+        else:
+            pQueue = taskqueue.Queue(name = 'CreateSitemap')
+            pQueue.purge()
+            
+            memcache.delete('tmp_sitemap_maxload')
+            memcache.delete('tmp_sitemap_finished_count')
+            
+            logging.info('Purged all temp values.')
+            
+        return count
+
         
     def buildElement(self, offSet):
-        maxLoadCount = float(self.getMaxLoad())
-        DBHandle = DBCache.all()
-        DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount').fetch(1000, offSet)
         
+        self.XMLBody = ''
+        
+        maxLoadCount = memcache.get('tmp_sitemap_maxload')
+        
+        if (maxLoadCount is None):
+            maxLoadCount = float(self.getMaxLoad())
+            logging.info('Max load count is: ' + str(maxLoadCount))
+            
+        DBHandle = DBCache.all()
+        
+        DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount')
+
         i = 0 
-        for Query in DBHandle:
+        for Query in DBHandle.fetch(self.PreLoad, offSet):
             i += 1
             line="<url>\n"
             line+="\t<loc>" + self.request.host_url + Query.URL + "</loc>\n"
@@ -70,38 +164,29 @@ class xml(webapp.RequestHandler):
             line+="\t<changefreq>weekly</changefreq>\n"
             
             priority = round( Query.LoadCount / maxLoadCount, 2 ) 
+            
             if priority < 0.01 :
                 priority = 0.01
+            
             line+="\t<priority>" + str(priority) + "</priority>\n"
             
             line+="</url>\n"
             
             self.XMLBody += line
-            
-        return i
-        
-        
-        
-    def xmlHeader(self):
-        header = "<?xml version='1.0' encoding='UTF-8'?>\n"
-        header += "<?xml-stylesheet type=\"text/xsl\" href=\"/sitemap.xsl\"?>\n"
-        header += "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
-        header += "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-        header += "xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9"
-        header += "http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n"
-        
-        return header
 
+        return i
         
 class txt(webapp.RequestHandler):
     sitemapBody = ''
     def get(self):
+        self.CACHEDTIME = Config(FileName='website.cfg', Title='sitemap').getInt('MemcacheTime')
+        self.PreLoad = Config(FileName='website.cfg', Title='sitemap').getInt('CountPreLoad')
         txt = memcache.get(self.request.path)
 
         if (txt is None) :
             
             txt = self.buildTxt()
-            memcache.add(self.request.path, txt, 60*60*24)
+            memcache.add(self.request.path, txt, self.CACHEDTIME)
             
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write(txt)
@@ -112,13 +197,13 @@ class txt(webapp.RequestHandler):
         offSet = 0
         count = self.buildTxtElement(offSet)
         
-        while (count == 1000):
-            offSet += 1000
+        while (count == self.PreLoad):
+            offSet += self.PreLoad
             count = self.buildTxtElement(offSet)
             
         
         return self.sitemapBody
-            
+        
         
     def buildTxtElement(self, offSet):
         DBHandle = DBCache.all()
@@ -130,7 +215,6 @@ class txt(webapp.RequestHandler):
             
         return i
         
-
 class xsl(webapp.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'application/xml'
@@ -258,6 +342,7 @@ def main():
     application = webapp.WSGIApplication([
                 ('/sitemap.xsl', xsl),
                 ('/sitemap.xml', xml),
+                ('/sitemap.xml/Create', xmlCreate),
                 ('/sitemap.txt', txt),
                                     
             ], 
