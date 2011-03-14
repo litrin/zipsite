@@ -20,6 +20,7 @@ class DBCache(db.Model):
     LoadCount = db.IntegerProperty(default = 1)
     
     def SaveBlob(self, URL, Entry, MimeType, Number=0):
+        
         if (len(Entry) < 1024*1024):
             DBHandle = DBCache()
             DBHandle.URL = URL

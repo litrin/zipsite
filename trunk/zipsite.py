@@ -13,27 +13,24 @@ from google.appengine.api import memcache
 from google.appengine.ext import db
 from zipfile import ZipFile
 from DataStore import *
+from LoadConfig import Config
 import os
 import logging
 import mimetypes
 
 
 class MainHandler(webapp.RequestHandler):
-    '''
-This is a project for Google App Engine that support create a webisite by ZIP packages!
-    '''
+
     URL = ''
-    CACHEDTIME = 60*60*24
-    #setting memcaching time (seconds)
-    WebsitePath = '/Website'
 
     def get(self):
     
+        self.loadSetting()
         self.URL=self.request.path
         
         if ( self.URL[-1:] == '/'):
         #Get the defaule file for the path
-            self.URL+='index.html'        
+            self.URL += self.IndexPage       
                 
         self.buildMimeType()
         #Set the Mime type in header
@@ -67,10 +64,12 @@ This is a project for Google App Engine that support create a webisite by ZIP pa
 
                 else:
                     Entry = self.loadZipFile()
-                    Entry = self.saveCacheFile(Entry, self.response.headers['Content-Type'])
-                    self.writeToMemcache(Entry)
+                    if (Entry is not None):
+                        Entry = self.saveCacheFile(Entry, self.response.headers['Content-Type'])
+                        
+                        self.writeToMemcache(Entry)
                     
-                    logging.info("Load: " + self.URL + " From ziped file")
+                        logging.info("Load: " + self.URL + " From ziped file")
 
         self.response.out.write(Entry)
         #Response building finished!
@@ -123,7 +122,7 @@ This is a project for Google App Engine that support create a webisite by ZIP pa
         #Can't file the file in Zip packages
             self.error(404)
             self.response.out.write('<h1> 404 No Found! </h1>')
-            exit()
+            #exit()
         
 
     def loadFromMemcach(self):
@@ -165,48 +164,19 @@ This is a project for Google App Engine that support create a webisite by ZIP pa
         #Send Content-type
         
     def saveCacheFile(self, Entry, MimeType):
-
-        if( MimeType == 'text/html'):
-
-            try:
-            #Loading Plugin
-                from Plugin import HtmlReplace
-                Entry = HtmlReplace.main(Entry)
-                logging.info('The pluging HtmlReplace executed!')
-
-            except:
-                logging.error('No found plugin HtmlReplace')
-
-                
-        if( #MimeType == 'image/png' or MimeType == 'image/x-png'
-            #MimeType == 'image/jpeg' or MimeType == 'image/pjpeg'
-            #or MimeType == 'image/gif' 
-            False):
-
-            try: 
-            #Loading Plugin
-                                
-                from Plugin import ImageOptimizer
-                Entry = ImageOptimizer.main(Entry, MimeType)
-                logging.info('The pluging OptimizeImage executed!')
-
-            except:
-                logging.error('No plugin! ')
-        
-        if ( MimeType == 'text/css'):
-            try:
-                from Plugin import CSSMinify
-                Entry = CSSMinify.main(Entry)
-                logging.info('The pluging CSSMinify executed!')
-                
-            except:
-                logging.error('No found plugin CSSMinify')
                         
         DBHandle = DBCache()
         DBHandle.SaveBlob(self.URL, Entry, MimeType)
                 
         return Entry
-
+        
+    def loadSetting(self):
+        Config(FileName='website.cfg', Title='zipsite')
+        
+        self.CACHEDTIME = Config(FileName='website.cfg', Title='zipsite').getInt('MemcacheTime')
+        self.WebsitePath = Config(FileName='website.cfg', Title='zipsite').getStr('WebsiteFilePath') 
+        self.IndexPage = Config(FileName='website.cfg', Title='zipsite').getStr('DefaultPage')
+       
 
 def main():
     application = webapp.WSGIApplication([

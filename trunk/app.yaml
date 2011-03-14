@@ -4,23 +4,23 @@ runtime: python
 api_version: 1
 
 handlers:
-- url: /myadmin/.*|/myadmin
-  script: $PYTHON_LIB/google/appengine/ext/admin
-  login: admin
 
 - url: /sitemap.xml|/sitemap.xsl|/sitemap.txt
   script: sitemap.py
   secure: never
 
-- url: .*
+- url: /sitemap.xml/Create
+  script: sitemap.py
+  secure: never
+  #login: admin
+
+- url: /deletecache
   script: deletecache.py
   secure: never
-  login: admin
+  #login: admin
   
 - url: .*
   script: zipsite.py
   secure: never
 
-builtins:
-- datastore_admin: on
 
