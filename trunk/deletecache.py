@@ -18,6 +18,10 @@ import logging
 class AddTask(webapp.RequestHandler):
     
     def get(self):
+        self.post()
+        self.redirect( '/' )
+    
+    def post(self):
         memcache.flush_all()
         logging.info('Memcache has all flushed! ')        
         db.delete(DBCache().all())
@@ -32,7 +36,7 @@ class AddTask(webapp.RequestHandler):
         else:
         	logging.info('DBcache has all flushed! ')
         	
-        self.redirect( '/' )
+       
         
 
 def main():
