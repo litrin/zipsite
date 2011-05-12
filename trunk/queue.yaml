@@ -4,7 +4,7 @@ queue:
   bucket_size: 10
   
 - name: CreateSitemap
-  rate: 10/m
+  rate: 5/m
   bucket_size: 1
   
   

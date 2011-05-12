@@ -1,4 +1,29 @@
 #!/bin/env python
+#
+# Copyright (c) 2011, Zipsite Project Group All rights reserved.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     # Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     # Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     # Neither the name of the Zipsite Project nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE GROUP AND CONTRIBUTORS "AS IS" AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE GROUP AND CONTRIBUTORS BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 ##
 ##	This is a project for Google App Engine 
 ##		that support create a webisite by ZIP packages!
@@ -12,10 +37,9 @@ import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from google.appengine.api.labs import taskqueue
-from DataStore import *
-from LoadConfig import Config
-import time
-import os
+from lib.DataStore import DBCache
+from lib.MemCache import CacheXMLSiteMap, CacheTempData, CacheTXTSiteMap
+from lib import LoadConfig 
 import logging
 
 
@@ -23,7 +47,7 @@ import logging
 class xml(webapp.RequestHandler):
     
     def get(self):
-        totalPart = memcache.get('sitemap.xml_total_part')
+        totalPart = CacheXMLSiteMap().getCount()
         
         if (totalPart is None):
             
@@ -37,19 +61,9 @@ class xml(webapp.RequestHandler):
             xml = ''
             
         else:
-            partNo = 1
             xml = self.xmlHeader()
-            
-            while(partNo <= totalPart):
-                key = 'sitemap.xml_part' + str (partNo)
-                partNo += 1
-                
-                partBody = memcache.get(key)
-                
-                if (partBody is None):
-                    partBody = ''
-                xml += partBody
-                
+            xml += CacheXMLSiteMap().load()
+            print x
             xml += "</urlset>\n"
         
         self.response.headers['Content-Type'] = 'application/xml'
@@ -78,48 +92,26 @@ class xmlCreate(webapp.RequestHandler):
     
     def get(self):
         
-        self.sitemapCacheTime = Config(FileName='website.cfg', Title='sitemap').getInt('MemcacheTime')
-        self.PreLoad = Config(FileName='website.cfg', Title='sitemap').getInt('CountPreLoad')
-        
-        finishedCount = memcache.get('tmp_sitemap_finished_count')
+        self.PreLoad = LoadConfig.getInt('sitemap', 'CountPreLoad')
+        finishedCount = CacheTempData().load('tmp_sitemap_finished_count')
         
         if (finishedCount is None):
             finishedCount = 0
         
-        self.buildXml(finishedCount)
-        
-    def getMaxLoad(self):
+        print finishedCount
+        self.buildTask(int(finishedCount))
+
     
-        DBHandle = DBCache.all()
-        DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount')
-        
-        for Query in DBHandle.fetch(1):
-            memcache.add('tmp_sitemap_maxload', float(Query.LoadCount), 60*5)
-            return Query.LoadCount 
-    
-    def buildXml(self, offSet):
+    def buildTask(self, offSet):
 
         count = self.buildElement(offSet)
         
-        partNo =  memcache.get('sitemap.xml_total_part')
-        if (partNo is None):
-            partNo = 0
-        partNo += 1
-        memcache.set('sitemap.xml_total_part', partNo, self.sitemapCacheTime)
-        
-        logging.info('Start caching part ' + str(partNo))
-        
         finishedCount = offSet + count
-
-        key = 'sitemap.xml_part' + str (partNo)
+        CacheTempData().save('tmp_sitemap_finished_count', finishedCount)
         
-        memcache.set(key, self.XMLBody, self.sitemapCacheTime)
-        memcache.set('tmp_sitemap_finished_count', finishedCount, 60*5)
+        pQueue = taskqueue.Queue(name = 'CreateSitemap')
 
-
-        if (count == self.PreLoad):
-            
-            pQueue = taskqueue.Queue(name = 'CreateSitemap')
+        if (count == self.PreLoad):            
             taskurl = 'http://' + self.request.host_url
             pTask = taskqueue.Task(url='/sitemap.xml/Create', params=dict(url=taskurl))
         
@@ -127,25 +119,22 @@ class xmlCreate(webapp.RequestHandler):
             logging.info('Task queue added!')
             
         else:
-            pQueue = taskqueue.Queue(name = 'CreateSitemap')
+            CacheXMLSiteMap().finish()
             pQueue.purge()
-            
-            memcache.delete('tmp_sitemap_maxload')
-            memcache.delete('tmp_sitemap_finished_count')
             
             logging.info('Purged all temp values.')
             
-        return count
+        #return count
 
         
     def buildElement(self, offSet):
         
-        self.XMLBody = ''
+        XMLBody = ''
         
         maxLoadCount = memcache.get('tmp_sitemap_maxload')
         
         if (maxLoadCount is None):
-            maxLoadCount = float(self.getMaxLoad())
+            maxLoadCount = float(DBCache().getMaxHtmlLoad())
             logging.info('Max load count is: ' + str(maxLoadCount))
             
         DBHandle = DBCache.all()
@@ -172,21 +161,21 @@ class xmlCreate(webapp.RequestHandler):
             
             line+="</url>\n"
             
-            self.XMLBody += line
-
+            XMLBody += line
+        CacheXMLSiteMap().save(XMLBody)
         return i
         
 class txt(webapp.RequestHandler):
     sitemapBody = ''
     def get(self):
-        self.CACHEDTIME = Config(FileName='website.cfg', Title='sitemap').getInt('MemcacheTime')
-        self.PreLoad = Config(FileName='website.cfg', Title='sitemap').getInt('CountPreLoad')
-        txt = memcache.get(self.request.path)
 
-        if (txt is None) :
-            
+        self.PreLoad = LoadConfig.getInt('sitemap', 'CountPreLoad')
+        sitemap = CacheTXTSiteMap().load()
+
+        if (sitemap is not None) :
+            txt = sitemap
+        else:
             txt = self.buildTxt()
-            memcache.add(self.request.path, txt, self.CACHEDTIME)
             
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write(txt)
@@ -201,7 +190,7 @@ class txt(webapp.RequestHandler):
             offSet += self.PreLoad
             count = self.buildTxtElement(offSet)
             
-        
+        CacheTXTSiteMap().finish()
         return self.sitemapBody
         
         
@@ -212,17 +201,16 @@ class txt(webapp.RequestHandler):
         i = 0 
         for Query in DBHandle:
             self.sitemapBody += self.request.host_url + Query.URL  + '\n'
+            CacheTXTSiteMap().save(self.sitemapBody)
             
+        
         return i
         
 class xsl(webapp.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'application/xml'
         
-        xsl = '''<xsl:stylesheet version="2.0" 
-                xmlns:html="http://www.w3.org/TR/REC-html40"
-                xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
-                xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        xsl = '''<xsl:stylesheet version="2.0" xmlns:html="http://www.w3.org/TR/REC-html40" xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 	<xsl:output method="html" version="1.0" encoding="UTF-8" indent="yes"/>
 	<xsl:template match="/">
 		<html xmlns="http://www.w3.org/1999/xhtml">

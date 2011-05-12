@@ -5,7 +5,7 @@ api_version: 1
 
 handlers:
 
-- url: /sitemap.xml|/sitemap.xsl|/sitemap.txt
+- url: /sitemap\..*
   script: sitemap.py
   secure: never
 
@@ -22,5 +22,4 @@ handlers:
 - url: .*
   script: zipsite.py
   secure: never
-
-
+  
