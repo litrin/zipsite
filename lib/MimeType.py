@@ -25,51 +25,29 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 ##
-##    This is a project for Google App Engine 
-##        that support create a webisite by ZIP packages!
+##	This is a project for Google App Engine 
+##		that support create a webisite by ZIP packages!
 ##
-##    By Litrin J. 2011/03
-##    Website: http://code.google.com/p/zipsite
-##    Example: android-sdk.appspot.com
+##	By Litrin J. 2011/05
+##	Website: www.litrin.net
+##	Example: android-sdk.appspot.com
 ##
 
-import wsgiref.handlers
-from google.appengine.ext import webapp
-from google.appengine.api import memcache
-from google.appengine.api.labs import taskqueue
-from lib.DataStore import *
-import logging
+import mimetypes, os
 
-class AddTask(webapp.RequestHandler):
+def get(URLString):
+    #Building the MimeType in Http header
+    sFilename = os.path.basename(URLString)
+    lFileName = sFilename.split(".")
+    sExFilename = lFileName.pop()
     
-    def get(self):
-        self.post()
-        self.redirect( '/' )
+    mimetypes.init()
+    mimetypes.add_type('image/ico', '.ico')
+        
+    try:
+        sMimeType = mimetypes.types_map['.'+sExFilename]
+    except:
+        sMimeType = 'text/html'
     
-    def post(self):
-        DBCache().flush()
-        
-        pQueue = taskqueue.Queue(name = 'DeleteDBCache')
-        
-        if (DBCache().all().count() > 1 ):
-            taskurl = 'http://' + self.request.host_url
-            pTask = taskqueue.Task(url='/cacheflush', params=dict(url=taskurl))
-            pQueue.add(pTask)
-            
-        else:
-            memcache.flush_all()
-            pQueue.purge()
-            
-            logging.info('DBcache has all flushed! ')
-            
-
-def main():
-    application = webapp.WSGIApplication([
-                            ('.*', AddTask),
-                           
-                                ], debug=True)
-                                
-    wsgiref.handlers.CGIHandler().run(application)
-
-if __name__ == '__main__':
-    main()
+    return str(sMimeType) #maybe there is a bug on Py2.6 for mac
+    

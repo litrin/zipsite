@@ -25,51 +25,30 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 ##
-##    This is a project for Google App Engine 
-##        that support create a webisite by ZIP packages!
+##	This is a project for Google App Engine 
+##		that support create a webisite by ZIP packages!
 ##
-##    By Litrin J. 2011/03
-##    Website: http://code.google.com/p/zipsite
-##    Example: android-sdk.appspot.com
+##	By Litrin J. 2011/03
+##	Website: www.litrin.net
+##	Example: android-sdk.appspot.com
 ##
 
-import wsgiref.handlers
-from google.appengine.ext import webapp
-from google.appengine.api import memcache
-from google.appengine.api.labs import taskqueue
-from lib.DataStore import *
-import logging
+import ConfigParser, os
 
-class AddTask(webapp.RequestHandler):
-    
-    def get(self):
-        self.post()
-        self.redirect( '/' )
-    
-    def post(self):
-        DBCache().flush()
+CONFIG_FILE = 'zipSite.cfg'
+
+def Get (ConfigTitle, Setting):
+    global CONFIG_FILE
+    ConfigFile = open(CONFIG_FILE, 'r')
+
+    config = ConfigParser.ConfigParser()
+    config.readfp(ConfigFile)
+    value = config.get(ConfigTitle, Setting)
+    ConfigFile.close()
+    return value
         
-        pQueue = taskqueue.Queue(name = 'DeleteDBCache')
+def getStr(ConfigTitle, Setting):
+    return str(Get(ConfigTitle, Setting))
         
-        if (DBCache().all().count() > 1 ):
-            taskurl = 'http://' + self.request.host_url
-            pTask = taskqueue.Task(url='/cacheflush', params=dict(url=taskurl))
-            pQueue.add(pTask)
-            
-        else:
-            memcache.flush_all()
-            pQueue.purge()
-            
-            logging.info('DBcache has all flushed! ')
-            
-
-def main():
-    application = webapp.WSGIApplication([
-                            ('.*', AddTask),
-                           
-                                ], debug=True)
-                                
-    wsgiref.handlers.CGIHandler().run(application)
-
-if __name__ == '__main__':
-    main()
+def getInt(ConfigTitle, Setting):
+    return int(Get(ConfigTitle, Setting))
