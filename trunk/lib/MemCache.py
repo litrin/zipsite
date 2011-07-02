@@ -28,13 +28,14 @@
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
 ##
-##    By Litrin J. 2011/05
+##    By Litrin J. 2011/06
 ##    Website: www.litrin.net
 ##    Example: android-sdk.appspot.com
 ##
 
 from google.appengine.api import memcache
 import logging
+import pickle
 from lib import LoadConfig
 
 class MemCache():
@@ -51,7 +52,7 @@ class MemCache():
             return True
         
         else:
-            Entry = str(Entry)
+            Entry = pickle.dumps(Entry)
             if(len(Entry) < 1024*1024):
                 memcache.add( memcacheKey, Entry, self.Time )
                 logging.info(memcacheKey + ' cached!')
@@ -64,10 +65,11 @@ class MemCache():
         
     def load(self, key):
         memcacheKey = self.getKeyName(key)
-        return memcache.get(memcacheKey)
-        
-    def get(self, key):
-        return self.get(key)
+        Value = memcache.get(memcacheKey)
+        if (Value == None):
+            return None
+            
+        return pickle.loads(memcache.get(memcacheKey))
 
     def remove(self, key):
         memcache.delete(self.getKeyName(key))
@@ -83,6 +85,7 @@ class MemCache():
 class CacheURL(MemCache):
     Lable = 'URL_Cache:'
     Time = LoadConfig.getInt('zipsite', 'MemcacheTime')
+
     
 class CacheTempData(MemCache):
     Lable = 'TempValue:'
@@ -100,7 +103,7 @@ class CacheSiteMap:
         
     def save(self, Data):
         key = self.Lable + '_' + str(self.PartCount)
-        print key
+        
         try:
             memcache.add( key, Data, self.Time )
             logging.info(key + ':' + Data)

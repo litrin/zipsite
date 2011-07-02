@@ -28,7 +28,7 @@
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
 ##
-##    By Litrin J. 2011/02
+##    By Litrin J. 2011/06
 ##    Website: http://code.google.com/p/zipsite
 ##
 
@@ -43,13 +43,15 @@ from lib.MemCache import CacheURL
 from lib.LoadFile import NoCached
 import os
 import logging
+import time, datetime
 
 
 class MainHandler(webapp.RequestHandler):
 
     URLString = ''
     IndexPage = LoadConfig.getStr('zipsite', 'DefaultPage')
-    NoErrors = True
+    CacheControl = LoadConfig.getInt('zipsite', 'Cache-Control')
+    HttpStatus  = 200
 
     def get(self):
     
@@ -60,30 +62,49 @@ class MainHandler(webapp.RequestHandler):
             self.URLString += self.IndexPage       
             
         DBHandle = DBCache()
-        (sMimeType, Entry) = DBHandle.load(self.URLString) 
+        Entry = DBHandle.load(self.URLString) 
         
         if (Entry is not None):
             logging.info("Load: " + self.URLString + " From Cached!")
-                        
+            
         else:
             try:
-                (sMimeType, Entry) = NoCached().load(self.URLString)
+                Entry = NoCached().load(self.URLString)
                 
             except NameError:
-                self.pageNoFound()
-                self.NoErrors = False
-           
-        if (self.NoErrors):
-            self.response.headers['Content-Type'] = str(sMimeType)
-            self.response.out.write(Entry)
-            #Response building finished!
+                logging.info('404 Page no found at ' + self.URLString)
+		
+                Entry = ('text/html', '<h1>404 Page No Found!</h1>', time.time())
+                self.HttpStatus = 404
+            
+        self.httpHandle(Entry)
+    
+    def httpHandle(self, Entry):
         
-    def pageNoFound(self):
-        logging.info('404 Page no found at ' + self.URLString)
-        self.response.headers['Content-Type'] = 'text/html'
-        self.response.out.write('<h1>404 Page No Found!</h1>')
+        sMimeType = Entry[0]
+        Content   = Entry[1]
+        CreateTime = Entry[2]
+        
+        if (self.request.if_modified_since is not None):
+            localCachedTime = time.mktime(time.strptime( self.request.headers['If-Modified-Since'], "%a, %d %b %Y %H:%M:%S GMT"))
+            
+            if(localCachedTime == CreateTime):
+                self.HttpStatus = 304
+                
+        self.response.set_status(self.HttpStatus)
+        self.response.headers['Content-Type'] = sMimeType
+        
+        sModifyTime = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(CreateTime))
+        self.response.headers.add_header('Last-Modified', sModifyTime)
 
+        sExpireTime = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(CreateTime + self.CacheControl * 24 * 3600))
+        self.response.headers.add_header('Expires', sExpireTime)
 
+        self.response.headers['Cache-Control'] = 'max-age=' + str(self.CacheControl * 24 * 3600)
+        
+        
+        self.response.out.write(Content)
+        
 def main():
     application = webapp.WSGIApplication([
                             ('.*', MainHandler),

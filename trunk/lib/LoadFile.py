@@ -28,7 +28,7 @@
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
 ##
-##    By Litrin J. 2011/02
+##    By Litrin J. 2011/06
 ##    Website: www.litrin.net
 ##    Example: android-sdk.appspot.com
 ##
@@ -39,27 +39,29 @@ from lib import LoadConfig
 from lib import MimeType
 import os
 import logging
+import time
 
 class NoCached:
 
     WebsiteFilePath = LoadConfig.getStr('zipsite', 'WebsiteFilePath')
 
     def load(self, URLString, cache=True):
-        Entry = self.loadUnZipFile(URLString)
+        Content = self.loadUnZipFile(URLString)
         
-        if ( Entry is None):
-            Entry = self.loadZipFile(URLString)
+        if ( Content is None):
+            Content = self.loadZipFile(URLString)
         
-        if ( Entry is None):
+        if ( Content is None):
             raise NameError, URLString
         
         sMimeType = MimeType.get(URLString)
-        
+        CreateTime= time.time()
+
         if (cache):
             DBHandle = DBCache()
-            DBHandle.save(URLString, Entry, sMimeType)
-            
-        return (sMimeType, Entry)
+            DBHandle.save(URLString, Content, sMimeType)
+         
+            return [sMimeType, Content, CreateTime]
         
     def loadZipFile(self, URLString):
     #Load the file from zip files. This is the core function!
@@ -91,7 +93,7 @@ class NoCached:
             #Found the Zip file
                 ZipFileHandle = ZipFile(sZipFilename)
                 try:
-                    Entry = ZipFileHandle.read(sFileName)
+                    Content = ZipFileHandle.read(sFileName)
                     ZipFileHandle.close()
                     logging.info(sFileName + " in " + sZipFilename + " Loaded!")
                     break
@@ -100,20 +102,19 @@ class NoCached:
                     logging.error('No found ' + URLString + '!')
         
             iPathLevel +=1
-
         
-        return Entry
+        return Content
     
     def loadUnZipFile(self, URLString):
         
         sRealFileName = os.getcwd() + self.WebsiteFilePath + URLString
-        Entry = None
+        Content = None
         
         if (os.path.exists(sRealFileName)):
         #If the file not be ziped, read it drictory    
             fNoZipedFile = open(sRealFileName, 'r')
-            Entry = fNoZipedFile.read()
+            Content = fNoZipedFile.read()
             fNoZipedFile.close()
             logging.info("Load: " + URLString + " From unziped file")
             
-        return Entry
+        return Content
