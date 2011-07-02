@@ -69,7 +69,7 @@ class NoCached:
         iPathLevel = 1
         #Loop count, The dir layers
 
-        Entry = None
+        Content = None
         while(iPathLevel <= len(lFilename)):
         #Get the zip file name and the filename from the URL, support muli-layer    
             sFilePath = os.getcwd() + self.WebsiteFilePath
