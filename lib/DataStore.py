@@ -28,13 +28,14 @@
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
 ##
-##    By Litrin J. 2011/02
+##    By Litrin J. 2011/06
 ##    Website: www.litrin.net
 ##    Example: android-sdk.appspot.com
 ##
 
 from google.appengine.ext import db
 from lib.MemCache import CacheURL, CacheTempData
+import time
 
 class DBCache(db.Model):
     
@@ -47,7 +48,7 @@ class DBCache(db.Model):
     
     def save(self, URLString, Entry, MimeType, Number=0):
         
-        if (len(Entry) < 1024*1024):
+        if (len(Entry) < 1024 * 1024): #GAE limit, 1M object
             DBHandle = DBCache()
             DBHandle.URL = URLString
             DBHandle.BlobEntry = Entry
@@ -65,12 +66,16 @@ class DBCache(db.Model):
                 spliteEntry += str(bit)
                 if ( count > 1024*1024*0.9 ):
                     count = 0
-                    self.save(URLString, spliteEntry, MimeType, Number)
+                    self.save(URLString, spliteContent, MimeType, Number)
                     
                     Number += 1
                     spliteEntry = ''
                                         
-            self.SaveBlob(URLString, spliteEntry, MimeType, Number)
+            self.SaveBlob(URLString, spliteContent, MimeType, Number)
+            
+            CreateTime = time.time()
+
+            Entry = [MimeType, spliteContent, CreateTime]
             
             CacheURL().save(URLString, Entry)
     
@@ -78,29 +83,30 @@ class DBCache(db.Model):
     
         Entry = CacheURL().load(URLString)
         if (Entry is not None):
-            from lib import MimeType
-            MimeType = MimeType.get(URLString)
-            
-            return (MimeType, Entry)
+            return Entry 
         
         DBHandle = DBCache.all()
         DBHandle.filter("URL = ", URLString).order('Number').fetch(1000)
     
         if(DBHandle.count() == 0):
-            return (None, None)
+            return None
             
         else:
             MimeType = ''
-            Entry = ''
+            Content = ''
+
             for Query in DBHandle:
-                Entry += str(Query.BlobEntry)
+                Content += str(Query.BlobEntry)
                 MimeType = str(Query.MimeType)
+                CreateTime = time.mktime(Query.CreateTime.timetuple())
+
                 Query.LoadCount = Query.LoadCount + 1
                 Query.put()
                 
-                CacheURL().save(URLString, Entry)
+            Entry = [MimeType, Content, CreateTime]
+            CacheURL().save(URLString, Entry)
 
-            return (MimeType, Entry)
+            return Entry
             
     def remove(self, URLString):
         DBHandle = DBCache.all()
