@@ -43,7 +43,7 @@ from lib.MemCache import CacheURL
 from lib.LoadFile import NoCached
 import os
 import logging
-import time, datetime
+import time
 
 
 class MainHandler(webapp.RequestHandler):
@@ -88,7 +88,7 @@ class MainHandler(webapp.RequestHandler):
         if (self.request.if_modified_since is not None):
             localCachedTime = time.mktime(time.strptime( self.request.headers['If-Modified-Since'], "%a, %d %b %Y %H:%M:%S GMT"))
             
-            if(localCachedTime == CreateTime):
+            if(abs( localCachedTime - CreateTime ) < 60 ):
                 self.HttpStatus = 304
                 
         self.response.set_status(self.HttpStatus)
@@ -97,7 +97,7 @@ class MainHandler(webapp.RequestHandler):
         sModifyTime = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(CreateTime))
         self.response.headers.add_header('Last-Modified', sModifyTime)
 
-        sExpireTime = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(CreateTime + self.CacheControl * 24 * 3600))
+        sExpireTime = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(time.time() + self.CacheControl * 24 * 3600))
         self.response.headers.add_header('Expires', sExpireTime)
 
         self.response.headers['Cache-Control'] = 'max-age=' + str(self.CacheControl * 24 * 3600)
