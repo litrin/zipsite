@@ -1,5 +1,5 @@
 #!/bin/env python
-#
+#/*{{{*/
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
+#/*}}}*/
 ##
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
@@ -32,7 +32,7 @@
 ##    Website: http://code.google.com/p/zipsite
 ##
 
-import wsgiref.handlers
+import wsgiref.handlers/*{{{*/
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from google.appengine.ext import db
@@ -44,17 +44,17 @@ from lib.LoadFile import NoCached
 import os
 import logging
 import time
-
+/*}}}*/
 
 class MainHandler(webapp.RequestHandler):
 
-    URLString = ''
+    URLString = ''/*{{{*/
     IndexPage = LoadConfig.getStr('zipsite', 'DefaultPage')
     CacheControl = LoadConfig.getInt('zipsite', 'Cache-Control')
     HttpStatus  = 200
-
+/*}}}*/
     def get(self):
-    
+    /*{{{*/
         self.URLString=self.request.path
         
         if ( self.URLString[-1:] == '/'):
@@ -78,10 +78,10 @@ class MainHandler(webapp.RequestHandler):
                 self.HttpStatus = 404
             
         self.httpHandle(Entry)
-    
+    /*}}}*/
     def httpHandle(self, Entry):
         
-        sMimeType = Entry[0]
+        sMimeType = Entry[0]/*{{{*/
         Content   = Entry[1]
         CreateTime = Entry[2]
         
@@ -104,13 +104,13 @@ class MainHandler(webapp.RequestHandler):
         
         
         self.response.out.write(Content)
-        
+        /*}}}*/
 def main():
-    application = webapp.WSGIApplication([
+    application = webapp.WSGIApplication([/*{{{*/
                             ('.*', MainHandler),
                                 ], 
                                                     debug=True)
     wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == '__main__':
-    main()
+    main()/*}}}*/

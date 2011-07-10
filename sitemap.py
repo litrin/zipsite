@@ -1,5 +1,5 @@
 #!/bin/env python
-#
+#/*{{{*/
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
+#/*}}}*/
 ##
 ##	This is a project for Google App Engine 
 ##		that support create a webisite by ZIP packages!
@@ -33,7 +33,7 @@
 ##	Example: android-sdk.appspot.com
 ##
 
-import wsgiref.handlers
+import wsgiref.handlers/*{{{*/
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from google.appengine.api.labs import taskqueue
@@ -41,13 +41,12 @@ from lib.DataStore import DBCache
 from lib.MemCache import CacheXMLSiteMap, CacheTempData, CacheTXTSiteMap
 from lib import LoadConfig 
 import logging
-
-
+/*}}}*/
 
 class xml(webapp.RequestHandler):
     
     def get(self):
-        totalPart = CacheXMLSiteMap().getCount()
+        totalPart = CacheXMLSiteMap().getCount()/*{{{*/
         
         if (totalPart is None):
             
@@ -68,10 +67,10 @@ class xml(webapp.RequestHandler):
         
         self.response.headers['Content-Type'] = 'application/xml'
         self.response.out.write(xml)
-            
+            /*}}}*/
     
     def xmlHeader(self):
-    
+    /*{{{*/
         header = "<?xml version='1.0' encoding='UTF-8'?>\n"
         header += "<?xml-stylesheet type=\"text/xsl\" href=\"/sitemap.xsl\"?>\n"
         header += "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
@@ -80,19 +79,18 @@ class xml(webapp.RequestHandler):
         header += "http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n"
         
         return header
-
+/*}}}*/
 class xmlCreate(webapp.RequestHandler):
     
-    PreLoad = 500
-    
+    PreLoad = 500/*{{{*/
     sitemapCacheTime = 60*60*24
-    
+    /*}}}*/
     def post(self):
         self.get()
     
     def get(self):
         
-        self.PreLoad = LoadConfig.getInt('sitemap', 'CountPreLoad')
+        self.PreLoad = LoadConfig.getInt('sitemap', 'CountPreLoad')/*{{{*/
         finishedCount = CacheTempData().load('tmp_sitemap_finished_count')
         
         if (finishedCount is None):
@@ -100,10 +98,10 @@ class xmlCreate(webapp.RequestHandler):
         
         print finishedCount
         self.buildTask(int(finishedCount))
-
+/*}}}*/
     
     def buildTask(self, offSet):
-
+/*{{{*/
         count = self.buildElement(offSet)
         
         finishedCount = offSet + count
@@ -123,12 +121,12 @@ class xmlCreate(webapp.RequestHandler):
             pQueue.purge()
             
             logging.info('Purged all temp values.')
-            
+            /*}}}*/
         #return count
 
         
     def buildElement(self, offSet):
-        
+        /*{{{*/
         XMLBody = ''
         
         maxLoadCount = memcache.get('tmp_sitemap_maxload')
@@ -164,11 +162,11 @@ class xmlCreate(webapp.RequestHandler):
             XMLBody += line
         CacheXMLSiteMap().save(XMLBody)
         return i
-        
+        /*}}}*/
 class txt(webapp.RequestHandler):
     sitemapBody = ''
     def get(self):
-
+/*{{{*/
         self.PreLoad = LoadConfig.getInt('sitemap', 'CountPreLoad')
         sitemap = CacheTXTSiteMap().load()
 
@@ -180,9 +178,9 @@ class txt(webapp.RequestHandler):
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write(txt)
 
-    
+    /*}}}*/
     def buildTxt(self):
-       
+       /*{{{*/
         offSet = 0
         count = self.buildTxtElement(offSet)
         
@@ -193,9 +191,9 @@ class txt(webapp.RequestHandler):
         CacheTXTSiteMap().finish()
         return self.sitemapBody
         
-        
+        /*}}}*/
     def buildTxtElement(self, offSet):
-        DBHandle = DBCache.all()
+        DBHandle = DBCache.all()/*{{{*/
         DBHandle.filter("MimeType = ", 'text/html').filter('Number = ', 0).order('-LoadCount').fetch(1000, offSet)
         
         i = 0 
@@ -205,10 +203,10 @@ class txt(webapp.RequestHandler):
             
         
         return i
-        
+        /*}}}*/
 class xsl(webapp.RequestHandler):
     def get(self):
-        self.response.headers['Content-Type'] = 'application/xml'
+        self.response.headers['Content-Type'] = 'application/xml'/*{{{*/
         
         xsl = '''<xsl:stylesheet version="2.0" xmlns:html="http://www.w3.org/TR/REC-html40" xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 	<xsl:output method="html" version="1.0" encoding="UTF-8" indent="yes"/>
@@ -325,9 +323,9 @@ class xsl(webapp.RequestHandler):
 	</xsl:template>
 </xsl:stylesheet>'''
         self.response.out.write(xsl)
-
+/*}}}*/
 def main():
-    application = webapp.WSGIApplication([
+    application = webapp.WSGIApplication([/*{{{*/
                 ('/sitemap.xsl', xsl),
                 ('/sitemap.xml', xml),
                 ('/sitemap.xml/Create', xmlCreate),
@@ -338,4 +336,4 @@ def main():
     wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == '__main__':
-    main()
+    main()/*}}}*/
