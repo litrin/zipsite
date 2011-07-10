@@ -1,5 +1,5 @@
 #!/bin/env python
-#/*{{{*/
+#
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#/*}}}*/
+#
 ##
 ##	This is a project for Google App Engine 
 ##		that support create a webisite by ZIP packages!
@@ -38,7 +38,7 @@ import ConfigParser, os
 CONFIG_FILE = 'zipSite.cfg'
 
 def Get (ConfigTitle, Setting):
-    global CONFIG_FILE/*{{{*/
+    global CONFIG_FILE
     ConfigFile = open(CONFIG_FILE, 'r')
 
     config = ConfigParser.ConfigParser()
@@ -46,7 +46,7 @@ def Get (ConfigTitle, Setting):
     value = config.get(ConfigTitle, Setting)
     ConfigFile.close()
     return value
-        /*}}}*/
+        
 def getStr(ConfigTitle, Setting):
     return str(Get(ConfigTitle, Setting))
         

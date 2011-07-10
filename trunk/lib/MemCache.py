@@ -1,5 +1,5 @@
 #!/bin/env python
-#/*{{{*/
+#
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#/*}}}*/
+#
 ##
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
@@ -32,19 +32,19 @@
 ##    Website: www.litrin.net
 ##    Example: android-sdk.appspot.com
 ##
-/*{{{*/
+
 from google.appengine.api import memcache
 import logging
 import pickle
 from lib import LoadConfig
-/*}}}*/
+
 class MemCache():
     
-    Lable = ''/*{{{*/
+    Lable = ''
     Time = 0
-/*}}}*/
+
     def save(self, key, Entry):
-        memcacheKey = self.getKeyName(key)/*{{{*/
+        memcacheKey = self.getKeyName(key)
     
         if(Entry == None):
             logging.info('Entry is None!')
@@ -62,15 +62,15 @@ class MemCache():
                 logging.info(memcacheKey + ' too big to save in memcache!')
         
                 return False
-        /*}}}*/
+        
     def load(self, key):
-        memcacheKey = self.getKeyName(key)/*{{{*/
+        memcacheKey = self.getKeyName(key)
         Value = memcache.get(memcacheKey)
         if (Value == None):
             return None
             
         return pickle.loads(memcache.get(memcacheKey))
-/*}}}*/
+
     def remove(self, key):
         memcache.delete(self.getKeyName(key))
         
@@ -83,17 +83,17 @@ class MemCache():
 
 
 class CacheURL(MemCache):
-    Lable = 'URL_Cache:'/*{{{*/
+    Lable = 'URL_Cache:'
     Time = LoadConfig.getInt('zipsite', 'MemcacheTime')
-/*}}}*/
+
     
 class CacheTempData(MemCache):
-    Lable = 'TempValue:'/*{{{*/
+    Lable = 'TempValue:'
     Time = 900
-/*}}}*/
+
     
 class CacheSiteMap:
-    Lable = ''/*{{{*/
+    Lable = ''
     
     Time = LoadConfig.getInt('sitemap', 'MemcacheTime')
     PartCount = 1
@@ -158,7 +158,7 @@ class CacheSiteMap:
     
     def finish(self):
         memcache.delete(self.Lable + '_part_count:')
-/*}}}*/
+
 class CacheXMLSiteMap(CacheSiteMap):
     Lable = 'sitemap.xml'
     

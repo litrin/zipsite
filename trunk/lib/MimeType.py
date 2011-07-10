@@ -1,5 +1,5 @@
 #!/bin/env python
-#/*{{{*/
+#
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#/*}}}*/
+#
 ##
 ##	This is a project for Google App Engine 
 ##		that support create a webisite by ZIP packages!
@@ -36,7 +36,7 @@
 import mimetypes, os
 
 def get(URLString):
-    #Building the MimeType in Http header/*{{{*/
+    #Building the MimeType in Http header
     sFilename = os.path.basename(URLString)
     lFileName = sFilename.split(".")
     sExFilename = lFileName.pop()
@@ -50,4 +50,4 @@ def get(URLString):
         sMimeType = 'text/html'
     
     return str(sMimeType) #maybe there is a bug on Py2.6 for mac
-    /*}}}*/
+    

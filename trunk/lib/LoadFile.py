@@ -1,5 +1,5 @@
 #!/bin/env python
-#/*{{{*/
+#
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#/*}}}*/
+#
 ##
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
@@ -32,7 +32,7 @@
 ##    Website: www.litrin.net
 ##    Example: android-sdk.appspot.com
 ##
-/*{{{*/
+
 from zipfile import ZipFile
 from lib.DataStore import DBCache
 from lib import LoadConfig
@@ -40,13 +40,13 @@ from lib import MimeType
 import os
 import logging
 import time
-/*}}}*/
+
 class NoCached:
-/*{{{*/
+
     WebsiteFilePath = LoadConfig.getStr('zipsite', 'WebsiteFilePath')
-/*}}}*/
+
     def load(self, URLString, cache=True):
-        Content = self.loadUnZipFile(URLString)/*{{{*/
+        Content = self.loadUnZipFile(URLString)
         
         if ( Content is None):
             Content = self.loadZipFile(URLString)
@@ -62,9 +62,9 @@ class NoCached:
             DBHandle.save(URLString, Content, sMimeType)
          
             return [sMimeType, Content, CreateTime]
-        /*}}}*/
+        
     def loadZipFile(self, URLString):
-    #Load the file from zip files. This is the core function!/*{{{*/
+    #Load the file from zip files. This is the core function!
         lFilename = URLString.split('/')
         iPathLevel = 1
         #Loop count, The dir layers
@@ -104,9 +104,9 @@ class NoCached:
             iPathLevel +=1
         
         return Content
-    /*}}}*/
+    
     def loadUnZipFile(self, URLString):
-        /*{{{*/
+        
         sRealFileName = os.getcwd() + self.WebsiteFilePath + URLString
         Content = None
         
@@ -117,4 +117,4 @@ class NoCached:
             fNoZipedFile.close()
             logging.info("Load: " + URLString + " From unziped file")
             
-        return Content/*}}}*/
+        return Content

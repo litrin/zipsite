@@ -1,5 +1,5 @@
 #!/bin/env python
-#/*{{{*/
+#
 # Copyright (c) 2011, Zipsite Project Group All rights reserved.
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,7 +23,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#/*}}}*/
+#
 ##
 ##    This is a project for Google App Engine 
 ##        that support create a webisite by ZIP packages!
@@ -32,22 +32,22 @@
 ##    Website: www.litrin.net
 ##    Example: android-sdk.appspot.com
 ##
-/*{{{*/
+
 from google.appengine.ext import db
 from lib.MemCache import CacheURL, CacheTempData
 import time
-/*}}}*/
+
 class DBCache(db.Model):
     
-    CreateTime = db.DateTimeProperty(auto_now_add=True)/*{{{*/
+    CreateTime = db.DateTimeProperty(auto_now_add=True)
     URL = db.StringProperty(multiline=False)
     BlobEntry = db.BlobProperty()
     Number = db.IntegerProperty(default = 0)
     MimeType = db.StringProperty(multiline=False)
     LoadCount = db.IntegerProperty(default = 1)
-    /*}}}*/
+    
     def save(self, URLString, Entry, MimeType, Number=0):
-        /*{{{*/
+        
         if (len(Entry) < 1024 * 1024): #GAE limit, 1M object
             DBHandle = DBCache()
             DBHandle.URL = URLString
@@ -78,9 +78,9 @@ class DBCache(db.Model):
             Entry = [MimeType, spliteContent, CreateTime]
             
             CacheURL().save(URLString, Entry)
-    /*}}}*/
+    
     def load(self, URLString):
-    /*{{{*/
+    
         Entry = CacheURL().load(URLString)
         if (Entry is not None):
             return Entry 
@@ -107,9 +107,9 @@ class DBCache(db.Model):
             CacheURL().save(URLString, Entry)
 
             return Entry
-            /*}}}*/
+            
     def remove(self, URLString):
-        DBHandle = DBCache.all()/*{{{*/
+        DBHandle = DBCache.all()
         DBHandle.filter("URL = ", URLString).order('Number').fetch(1000)
                 
         if(DBHandle.count() == 0):
@@ -125,12 +125,12 @@ class DBCache(db.Model):
                 Query.delete()
                 
             return True
-/*}}}*/
+
     def flush(self):
         return db.delete(DBCache().all())            
 
     def getMaxHtmlLoad(self):
-        LoadCount = CacheTempData().load('maxHTMLLoad')/*{{{*/
+        LoadCount = CacheTempData().load('maxHTMLLoad')
         if (LoadCount is not None):
             return float(LoadCount)
             
@@ -140,4 +140,4 @@ class DBCache(db.Model):
         for Query in DBHandle.fetch(1):
             CacheTempData().save('maxHTMLLoad', Query.LoadCount)
             return float(Query.LoadCount)
-        /*}}}*/
+        
